@@ -8,7 +8,7 @@
     <Description>Source-generated structural copy and equality for a marked class.</Description>
     <PackageTags>nuvyntra;objectkit;source-generator</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/nuvyntralabs/NuvyntraLabs.NET.ObjectKit</PackageProjectUrl>
+    <PackageProjectUrl>https://nuvyntralabs.github.io/packages/nuvyntralabs-net-objectkit/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nuvyntralabs/NuvyntraLabs.NET.ObjectKit</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IsPackable>true</IsPackable>
