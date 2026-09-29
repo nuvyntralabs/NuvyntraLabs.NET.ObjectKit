@@ -1,0 +1,78 @@
+# net8.0, net9.0, and net10.0. Publishes nupkg and snupkg from GitHub Actions.
+# nuget.org uses NUGET_KEY_NET (NuvyntraLabs.NET.*). GitHub Packages uses GITHUB_TOKEN.
+# Never push NuGet from a local clone.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    name: Test and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Test
+        run: dotnet test NuvyntraLabs.NET.ObjectKit.sln -c Release --nologo
+
+      - name: Pack
+        run: dotnet pack src/NuvyntraLabs.NET.ObjectKit/NuvyntraLabs.NET.ObjectKit.csproj -c Release -o artifacts/nuget --nologo
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-linux
+          path: artifacts/nuget/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: nuget.org and GitHub Packages
+    needs: [test]
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-linux
+          path: artifacts/nuget
+
+      - name: Push nupkg and snupkg
+        env:
+          NUGET_KEY: ${{ secrets.NUGET_KEY_NET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NUGET_KEY}" ]; then
+            echo "::error::NUGET_KEY_NET secret is empty. Add a nuget.org API key scoped to NuvyntraLabs.NET.ObjectKit under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          dotnet nuget push "artifacts/nuget/*.nupkg" --api-key "$NUGET_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push "artifacts/nuget/*.nupkg" --api-key "$GITHUB_TOKEN" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
